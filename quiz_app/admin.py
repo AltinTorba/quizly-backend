@@ -11,3 +11,4 @@ class QuestionInline(admin.TabularInline):
 class QuizAdmin(admin.ModelAdmin):
     list_display = ("title", "owner", "created_at")
     inlines = [QuestionInline]
+    
