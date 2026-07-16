@@ -10,12 +10,29 @@ from google import genai
 from .models import Quiz, Question
 
 
-def download_audio(youtube_url: str) -> str:
-    """Downloads audio from a YouTube URL and returns the path to the mp3 file."""
-    filename = str(uuid.uuid4())
-    output_template = f"media/{filename}.%(ext)s"
+QUIZ_PROMPT_TEMPLATE = """Based on the following video transcript, generate a quiz.
+Return ONLY valid JSON, no markdown, no explanation, in this exact format:
+{{
+  "title": "short quiz title",
+  "description": "one sentence description",
+  "questions": [
+    {{
+      "question_title": "question text",
+      "question_options": ["option A", "option B", "option C", "option D"],
+      "answer": "the correct option, must match one of question_options exactly"
+    }}
+  ]
+}}
+Generate exactly 10 questions, each with exactly 4 options.
 
-    ydl_opts = {
+Transcript:
+{transcript}
+"""
+
+
+def _build_ydl_options(output_template: str) -> dict:
+    """Builds the yt-dlp options dict for audio-only extraction."""
+    return {
         "format": "bestaudio/best",
         "outtmpl": output_template,
         "postprocessors": [{
@@ -25,6 +42,13 @@ def download_audio(youtube_url: str) -> str:
         }],
         "quiet": True,
     }
+
+
+def download_audio(youtube_url: str) -> str:
+    """Downloads audio from a YouTube URL and returns the path to the mp3 file."""
+    filename = str(uuid.uuid4())
+    output_template = f"media/{filename}.%(ext)s"
+    ydl_opts = _build_ydl_options(output_template)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([youtube_url])
@@ -47,39 +71,30 @@ def cleanup_audio_file(audio_path: str) -> None:
 
 def build_quiz_prompt(transcript: str) -> str:
     """Builds the prompt sent to Gemini to generate a quiz from a transcript."""
-    return f"""Based on the following video transcript, generate a quiz.
-Return ONLY valid JSON, no markdown, no explanation, in this exact format:
-{{
-  "title": "short quiz title",
-  "description": "one sentence description",
-  "questions": [
-    {{
-      "question_title": "question text",
-      "question_options": ["option A", "option B", "option C", "option D"],
-      "answer": "the correct option, must match one of question_options exactly"
-    }}
-  ]
-}}
-Generate exactly 10 questions, each with exactly 4 options.
-
-Transcript:
-{transcript}
-"""
+    return QUIZ_PROMPT_TEMPLATE.format(transcript=transcript)
 
 
-def generate_quiz_with_gemini(transcript: str) -> dict:
-    """Sends the transcript to Gemini Flash and returns the parsed quiz data."""
+def _call_gemini(prompt: str) -> str:
+    """Sends a prompt to Gemini Flash and returns the raw text response."""
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-    prompt = build_quiz_prompt(transcript)
-
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
     )
+    return response.text.strip()
 
-    raw_text = response.text.strip()
-    raw_text = raw_text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return json.loads(raw_text)
+
+def _strip_markdown_fences(text: str) -> str:
+    """Removes markdown code fences that Gemini sometimes wraps JSON in."""
+    return text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+
+def generate_quiz_with_gemini(transcript: str) -> dict:
+    """Sends the transcript to Gemini Flash and returns the parsed quiz data."""
+    prompt = build_quiz_prompt(transcript)
+    raw_text = _call_gemini(prompt)
+    clean_text = _strip_markdown_fences(raw_text)
+    return json.loads(clean_text)
 
 
 def create_quiz_from_url(owner, youtube_url: str) -> Quiz:
