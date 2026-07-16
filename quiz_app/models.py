@@ -20,6 +20,7 @@ class Quiz(models.Model):
 
 
 class Question(models.Model):
+    """A single quiz question with four options and one correct answer."""
     quiz = models.ForeignKey(
         Quiz,
         related_name="questions",
@@ -28,7 +29,9 @@ class Question(models.Model):
     question_title = models.CharField(max_length=255)
     question_options = models.JSONField()
     answer = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.question_title
-    
+        

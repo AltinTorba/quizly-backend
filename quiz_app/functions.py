@@ -7,6 +7,43 @@ import yt_dlp
 import whisper
 from google import genai
 
+from .models import Quiz, Question
+
+
+def download_audio(youtube_url: str) -> str:
+    """Downloads audio from a YouTube URL and returns the path to the mp3 file."""
+    filename = str(uuid.uuid4())
+    output_template = f"media/{filename}.%(ext)s"
+
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "outtmpl": output_template,
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }],
+        "quiet": True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([youtube_url])
+
+    return f"media/{filename}.mp3"
+
+
+def transcribe_audio(audio_path: str) -> str:
+    """Transcribes an audio file to text using Whisper AI (base model)."""
+    model = whisper.load_model("base")
+    result = model.transcribe(audio_path)
+    return result["text"]
+
+
+def cleanup_audio_file(audio_path: str) -> None:
+    """Deletes a temporary audio file if it exists."""
+    if os.path.exists(audio_path):
+        os.remove(audio_path)
+
 
 def build_quiz_prompt(transcript: str) -> str:
     """Builds the prompt sent to Gemini to generate a quiz from a transcript."""
@@ -43,3 +80,36 @@ def generate_quiz_with_gemini(transcript: str) -> dict:
     raw_text = response.text.strip()
     raw_text = raw_text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     return json.loads(raw_text)
+
+
+def create_quiz_from_url(owner, youtube_url: str) -> Quiz:
+    """Runs the full pipeline: download, transcribe, generate, and save."""
+    audio_path = download_audio(youtube_url)
+    transcript = transcribe_audio(audio_path)
+    cleanup_audio_file(audio_path)
+    quiz_data = generate_quiz_with_gemini(transcript)
+    return save_quiz(owner, youtube_url, quiz_data)
+
+
+def save_quiz(owner, youtube_url: str, quiz_data: dict) -> Quiz:
+    """Saves generated quiz data as Quiz and Question model instances."""
+    quiz = Quiz.objects.create(
+        owner=owner,
+        title=quiz_data["title"],
+        description=quiz_data["description"],
+        video_url=youtube_url,
+    )
+    _save_questions(quiz, quiz_data["questions"])
+    return quiz
+
+
+def _save_questions(quiz: Quiz, questions_data: list) -> None:
+    """Creates Question instances linked to the given quiz."""
+    for q in questions_data:
+        Question.objects.create(
+            quiz=quiz,
+            question_title=q["question_title"],
+            question_options=q["question_options"],
+            answer=q["answer"],
+        )
+        
