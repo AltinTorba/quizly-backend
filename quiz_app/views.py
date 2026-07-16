@@ -30,4 +30,3 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = QuizSerializer
     permission_classes = [IsAuthenticated, IsOwner]
     queryset = Quiz.objects.all()
-    

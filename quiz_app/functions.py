@@ -112,4 +112,3 @@ def _save_questions(quiz: Quiz, questions_data: list) -> None:
             question_options=q["question_options"],
             answer=q["answer"],
         )
-        

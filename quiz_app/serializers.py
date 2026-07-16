@@ -25,4 +25,3 @@ class QuizSerializer(serializers.ModelSerializer):
 class QuizCreateSerializer(serializers.Serializer):
     """Validates the incoming YouTube URL used to create a quiz."""
     url = serializers.URLField()
-    
