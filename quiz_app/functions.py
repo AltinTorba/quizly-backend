@@ -3,9 +3,10 @@ import json
 import os
 import uuid
 
-import yt_dlp
 import whisper
+import yt_dlp
 from google import genai
+from yt_dlp.utils import DownloadError
 
 from .models import Quiz, Question
 
@@ -30,6 +31,10 @@ Transcript:
 """
 
 
+class InvalidVideoURLError(Exception):
+    """Raised when the given URL is not a valid, downloadable YouTube video."""
+
+
 def _build_ydl_options(output_template: str) -> dict:
     """Builds the yt-dlp options dict for audio-only extraction."""
     return {
@@ -50,8 +55,11 @@ def download_audio(youtube_url: str) -> str:
     output_template = f"media/{filename}.%(ext)s"
     ydl_opts = _build_ydl_options(output_template)
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([youtube_url])
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([youtube_url])
+    except DownloadError as exc:
+        raise InvalidVideoURLError(f"Could not download video: {youtube_url}") from exc
 
     return f"media/{filename}.mp3"
 
