@@ -11,6 +11,7 @@ it with Whisper AI, and generates a 10-question quiz using Gemini Flash AI.
 - yt-dlp for YouTube audio extraction
 - Whisper AI (OpenAI, local) for transcription
 - Gemini Flash AI for quiz generation
+- django-cors-headers for local frontend integration
 
 ## Requirements
 
@@ -43,12 +44,13 @@ it with Whisper AI, and generates a 10-question quiz using Gemini Flash AI.
    pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root with the following variables:
-SECRET_KEY=your-django-secret-key
-DEBUG=True
-GEMINI_API_KEY=your-gemini-api-key
-
-Get a free Gemini API key at https://aistudio.google.com/apikey
+4. Create a `.env` file in the project root (see `.env.example` for the
+   required variables) and fill in your own values:
+```bash
+   cp .env.example .env
+```
+   Then edit `.env` and add your actual `SECRET_KEY` and `GEMINI_API_KEY`.
+   Get a free Gemini API key at https://aistudio.google.com/apikey
 
 5. Apply migrations:
 ```bash
@@ -64,6 +66,22 @@ Get a free Gemini API key at https://aistudio.google.com/apikey
 ```bash
    python manage.py runserver
 ```
+
+## CORS Configuration
+
+If you're running the frontend locally with a tool like Live Server, make
+sure its origin (e.g., `http://127.0.0.1:5500`) is listed in
+`CORS_ALLOWED_ORIGINS` in `core/settings.py`:
+
+```python
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+]
+CORS_ALLOW_CREDENTIALS = True
+```
+
+Adjust the port to match whatever your local frontend server actually uses.
 
 ## API Endpoints
 
