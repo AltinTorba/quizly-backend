@@ -83,10 +83,11 @@ def build_quiz_prompt(transcript: str) -> str:
 
 
 def _call_gemini(prompt: str) -> str:
-    """Sends a prompt to Gemini Flash and returns the raw text response."""
+    """Sends a prompt to Gemini and returns the raw text response."""
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=model_name,
         contents=prompt,
     )
     return response.text.strip()

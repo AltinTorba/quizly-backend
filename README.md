@@ -44,7 +44,7 @@ it with Whisper AI, and generates a 10-question quiz using Gemini Flash AI.
    pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root (see `.env.example` for the
+44. Create a `.env` file in the project root (see `.env.example` for the
    required variables) and fill in your own values:
 ```bash
    cp .env.example .env
@@ -52,6 +52,11 @@ it with Whisper AI, and generates a 10-question quiz using Gemini Flash AI.
    Then edit `.env` and add your actual `SECRET_KEY` and `GEMINI_API_KEY`.
    Get a free Gemini API key at https://aistudio.google.com/apikey
 
+   `GEMINI_MODEL` defaults to `gemini-flash-latest` (Google's auto-updating
+   alias for the current stable Flash model). If you get a 404 error saying
+   a model is no longer available, check https://ai.google.dev/gemini-api/docs/models
+   for currently available models and override `GEMINI_MODEL` in your `.env`.
+   
 5. Apply migrations:
 ```bash
    python manage.py migrate
